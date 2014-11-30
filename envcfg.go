@@ -6,7 +6,10 @@ import(
     "os"
     "reflect"
     "errors"
+    "strconv"
 )
+
+const structTag = "envcfg" 
 
 
 func Unmarshal(v interface{}) error {
@@ -18,22 +21,92 @@ func Unmarshal(v interface{}) error {
         return err
     }
     makeSureValueIsInitialized(v)
-    strct := getStructValue(v)
 
-
-   
-
-
+    env, err := newEnviron()
+    if err != nil {
+        return err
+    }
+    
+    structVal := getStructValue(v)
+    if err := unmarshalAllStructFields(structVal, env); err != nil {
+        return err
+    }
 
     return nil 
 }
 
+func getEnvKey(structField reflect.StructField) string {
+    if tag := structField.Tag.Get(structTag); tag != "" {
+        return tag
+    }
+    return structField.Name
+}
 
+
+func unmarshalInt(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+    val, ok :=  env[getEnvKey(structField)]
+    if !ok {
+        return nil
+    }
+
+    i, err := strconv.Atoi(val)
+    if err != nil {
+        return err
+    }
+
+    fieldVal.SetInt(int64(i))
+    return nil 
+}
+
+func unmarshalBool(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+    val, ok :=  env[getEnvKey(structField)]
+    if !ok {
+        return nil
+    }
+
+    var vbool bool
+    switch val {
+        case "true": vbool = true
+        case "false": vbool = false
+        default: return errors.New("pass string 'true' or 'false' for boolean fields")   
+    }
+
+    fieldVal.SetBool(vbool)
+    return nil
+}
+
+func unmarshalString(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+    val, ok :=  env[getEnvKey(structField)]
+    if !ok {
+        return nil
+    }
+
+    fieldVal.SetString(val)
+    return nil 
+}
+
+
+func unmarshalSingleField(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+    switch structField.Type.Kind() {
+        case reflect.Int: return unmarshalInt(fieldVal, structField, env)
+        case reflect.String: return unmarshalString(fieldVal, structField, env)
+        case reflect.Bool: return unmarshalBool(fieldVal, structField, env)
+    }
+    return nil 
+}
+
+func unmarshalAllStructFields(structVal reflect.Value, env environ) error {
+    for i := 0; i < structVal.NumField(); i++ {
+        if err := unmarshalSingleField(structVal.Field(i), structVal.Type().Field(i), env); err != nil {
+            return err
+        }
+    }
+    return nil
+} 
 
 func getStructValue(v interface{}) reflect.Value {
     str := reflect.ValueOf(v) 
     for {
-        fmt.Println(str.Kind())
         if str.Kind() == reflect.Struct {
             break
         }
@@ -126,6 +199,3 @@ func newEnviron() (environ, error) {
     
     return env, nil
 }
-
-
-

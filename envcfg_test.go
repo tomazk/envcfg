@@ -130,11 +130,82 @@ func TestUnmarshalInit(t *testing.T) {
     Unmarshal(&v) // shouldn't panic
 }
 
-func TestUnmarshalSetFields(t *testing.T) {
-    var p *cfgValid1
+
+type IntType struct {
+    INT int
+    INT_1 int 
+    INT_2 int `envcfg:""`
+    INT_3 int `envcfg:"LABEL_INT"`
+    INT_4 int `envcfg:"LABEL_INT"`
+}
+
+func TestUnmarshalSetInt(t *testing.T) {
+    setEnv(t, "INT_1", "1")
+    setEnv(t, "INT_2", "2")
+    setEnv(t, "LABEL_INT", "3")
+    defer os.Clearenv()
+
+    var i IntType
+    Unmarshal(&i)
+    if !reflect.DeepEqual(IntType{0, 1, 2, 3, 3}, i) {
+        t.Fatal("should be eq")
+    }
+
+    var p *IntType
     Unmarshal(&p)
+    if !reflect.DeepEqual(&IntType{0, 1, 2, 3, 3}, p) {
+        t.Fatal("should be eq")
+    }
+
+    setEnv(t, "INT_1", "invalid")
+    if err := Unmarshal(&i); err == nil {
+        t.Fatal("should throw an error since we passed an invalid int value")
+    }
 }
 
 
+type StringType struct {
+    STR string
+    STR_1 string
+    STR_2 string `envcfg:""`
+    STR_3 string `envcfg:"LABEL_STR"`
+    STR_4 string `envcfg:"LABEL_STR"`
+}
+
+func TestUnmarshalString(t *testing.T) {
+    setEnv(t, "STR_1", "s1")
+    setEnv(t, "STR_2", "s2")
+    setEnv(t, "LABEL_STR", "s3")
+    defer os.Clearenv()
+
+    var s StringType
+    Unmarshal(&s)
+    if !reflect.DeepEqual(StringType{"", "s1","s2","s3", "s3"},s) {
+        t.Fatal("should be equal")
+    }
+}
 
 
+type BoolType struct {
+    BOOL bool
+    BOOL_1 bool
+    BOOL_2 bool `envcfg:"LABEL_BOOL"`
+}
+
+func TestUnmarshalBool(t *testing.T) {
+    setEnv(t, "BOOL_1", "true")
+    setEnv(t, "LABEL_BOOL", "true")
+    defer os.Clearenv()
+
+    var b BoolType
+    Unmarshal(&b)
+    if !reflect.DeepEqual(BoolType{false, true, true}, b) {
+        t.Log(b)
+        t.Fatal("should be equal")
+    }
+
+    setEnv(t, "LABEL_BOOL", "invalid")
+    if err := Unmarshal(&b); err == nil {
+        t.Fatal("should fail")
+    }
+}
