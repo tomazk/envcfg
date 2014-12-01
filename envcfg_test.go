@@ -268,7 +268,8 @@ func TestGeneral(t *testing.T) {
 	setEnv(t, "SOME_SLICE_INT", "1")
 	setEnv(t, "SOME_SLICE_INT_1", "1")
 	setEnv(t, "SOME_SLICE_INT_2", "5")
-	setEnv(t, "SOME_SLICE_STRING", "foo")
+	setEnv(t, "BAR", "bar")
+	setEnv(t, "SOME_SLICE_STRING", "foo${BAR}")
 
 	var gt GeneralTest
 	if err := Unmarshal(&gt); err != nil {
@@ -280,7 +281,7 @@ func TestGeneral(t *testing.T) {
 		SOME_BOOL:         true,
 		SOME_SLICE_BOOL:   []bool{true},
 		SOME_SLICE_INT:    []int{1, 1, 5},
-		SOME_SLICE_STRING: []string{"foo"},
+		SOME_SLICE_STRING: []string{"foobar"},
 	}
 	if !reflect.DeepEqual(gt, want) {
 		t.Fatal("should be eq")
