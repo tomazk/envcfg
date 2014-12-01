@@ -7,6 +7,7 @@ import(
     "reflect"
     "errors"
     "strconv"
+    "sort"
 )
 
 const structTag = "envcfg" 
@@ -28,6 +29,7 @@ func Unmarshal(v interface{}) error {
     }
     
     structVal := getStructValue(v)
+
     if err := unmarshalAllStructFields(structVal, env); err != nil {
         return err
     }
@@ -85,12 +87,27 @@ func unmarshalString(fieldVal reflect.Value, structField reflect.StructField, en
     return nil 
 }
 
+func unmarshalSlice(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+    envKey = getEnvKey(structField)
+    envNames make([]string, 0)
+
+    for envName, _ := range env {
+        if strings.HasPrefix(envName, envKey) {
+            envNames = append(envNames, envName)
+        }
+    }
+
+    sort.Strings(envNames)
+
+    return nil
+}
 
 func unmarshalSingleField(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
     switch structField.Type.Kind() {
         case reflect.Int: return unmarshalInt(fieldVal, structField, env)
         case reflect.String: return unmarshalString(fieldVal, structField, env)
         case reflect.Bool: return unmarshalBool(fieldVal, structField, env)
+        case reflect.Slice: return unmarshalSlice(fieldVal, structField, env)
     }
     return nil 
 }
@@ -114,7 +131,6 @@ func getStructValue(v interface{}) reflect.Value {
     }
     return str
 }
-
 
 func makeSureValueIsInitialized(v interface{}) {
     if reflect.TypeOf(v).Elem().Kind() != reflect.Ptr {

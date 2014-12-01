@@ -209,3 +209,15 @@ func TestUnmarshalBool(t *testing.T) {
         t.Fatal("should fail")
     }
 }
+
+type SliceType struct {
+    SLICE_STR []string
+}
+
+func TestUnmarshalSlice(t *testing.T) {
+    
+
+    var s SliceType
+    Unmarshal(&s)
+    t.Log(s)
+}
