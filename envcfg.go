@@ -60,6 +60,8 @@ func unmarshalInt(fieldVal reflect.Value, structField reflect.StructField, env e
     return nil 
 }
 
+var boolErr error = errors.New("pass string 'true' or 'false' for boolean fields")
+
 func unmarshalBool(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
     val, ok :=  env[getEnvKey(structField)]
     if !ok {
@@ -70,7 +72,7 @@ func unmarshalBool(fieldVal reflect.Value, structField reflect.StructField, env 
     switch val {
         case "true": vbool = true
         case "false": vbool = false
-        default: return errors.New("pass string 'true' or 'false' for boolean fields")   
+        default: return boolErr   
     }
 
     fieldVal.SetBool(vbool)
@@ -87,18 +89,58 @@ func unmarshalString(fieldVal reflect.Value, structField reflect.StructField, en
     return nil 
 }
 
+func appendToStringSlice(fieldVal reflect.Value, sliceVal string) error {
+    fieldVal.Set(reflect.Append(fieldVal, reflect.ValueOf(sliceVal)))
+    return nil
+}
+
+func appendToIntSlice(fieldVal reflect.Value, sliceVal string) error {
+    val, err := strconv.Atoi(sliceVal)
+    if err != nil {
+        return err 
+    }
+    fieldVal.Set(reflect.Append(fieldVal, reflect.ValueOf(val)))
+    return nil
+}
+
+func appendToBoolSlice(fieldVal reflect.Value, sliceVal string) error {
+    var val bool
+    switch sliceVal {
+        case "true": val = true
+        case "false": val = false
+        default: return boolErr
+    }
+    fieldVal.Set(reflect.Append(fieldVal, reflect.ValueOf(val)))
+    return nil
+}
+
 func unmarshalSlice(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
-    envKey = getEnvKey(structField)
-    envNames make([]string, 0)
+    envKey := getEnvKey(structField)
+    envNames := make([]string, 0)
 
     for envName, _ := range env {
         if strings.HasPrefix(envName, envKey) {
             envNames = append(envNames, envName)
         }
     }
-
     sort.Strings(envNames)
 
+    var err error
+    for _ , envName := range envNames {
+        val, ok := env[envName]
+        if !ok {
+            continue
+        }
+        switch structField.Type.Elem().Kind() {
+            case reflect.String: err = appendToStringSlice(fieldVal, val)
+            case reflect.Int: err = appendToIntSlice(fieldVal, val)
+            case reflect.Bool: err = appendToBoolSlice(fieldVal, val)
+        }
+        if err != nil {
+            return err
+        }
+
+    }
     return nil
 }
 

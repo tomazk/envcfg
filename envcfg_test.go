@@ -212,12 +212,40 @@ func TestUnmarshalBool(t *testing.T) {
 
 type SliceType struct {
     SLICE_STR []string
+    SLICE_INT []int
+    SLICE_BOOL []bool
 }
 
 func TestUnmarshalSlice(t *testing.T) {
-    
+    setEnv(t, "SLICE_STR_1", "foo")
+    setEnv(t, "SLICE_STR_2", "bar")
+    setEnv(t, "SLICE_INT_1", "1")
+    setEnv(t, "SLICE_INT_2", "2")
+    setEnv(t, "SLICE_BOOL_1", "true")
+    setEnv(t, "SLICE_BOOL_2", "false")
+    defer os.Clearenv()
 
     var s SliceType
     Unmarshal(&s)
-    t.Log(s)
+    if !reflect.DeepEqual(s, SliceType{[]string{"foo", "bar"}, []int{1, 2}, []bool{true, false}}) {
+        t.Fatal("should be equal")
+    }
+}
+
+
+func TestUnmarshalSliceFail(t *testing.T) {
+    defer os.Clearenv()
+    setEnv(t, "SLICE_BOOL_1", "true")
+    setEnv(t, "SLICE_BOOL_2", "invalid")
+    var s SliceType
+
+    if err := Unmarshal(&s); err == nil {
+        t.Fatal("should fail on an invalid bool value")
+    }
+    os.Clearenv()
+
+    setEnv(t, "SLICE_INT_1", "invalid")
+    if err := Unmarshal(&s); err == nil {
+        t.Fatal("shoud fail on invalid int")
+    }
 }
