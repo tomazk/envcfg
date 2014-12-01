@@ -7,6 +7,7 @@ Un-marshaling environment variables to Go structs
 
 Let's set a bunch of environment variables and then run your go app
 ```bash
+#!/usr/bin/env bash
 export DEBUG="false"
 export DB_HOST="localhost"
 export DB_PORT="8012"
@@ -52,15 +53,53 @@ Instead of having a bunch of `os.Getenv("ENV_VAR")` buried deep in your code whe
 `func Unmarshal(v interface{}) error` can recieve a reference to an object or even a reference to a pointer:
 
 ```go
-var val1 *StructType
-envcfg.Unmarshal(&val1)
-
 var val2 StructType
 envcfg.Unmarshal(&val2)
+
+var val1 *StructType 
+envcfg.Unmarshal(&val1) // val1 will be initialized
 ```
 
+`envcfg.Unmarshal` supports `int`, `string`, `bool` and `[]int`, `[]string`, `[]bool` types of fields wihin a struct. It will return nil if a valid struct was passed or return an error if not.
+```go
+type StructType struct {
+	INT           int
+	BOOL          bool
+	STRING        string
+	SLICE_STRING  []string
+	SLICE_BOOL    []bool
+	SLICE_INT     []int
+}
+```
+You can also use struct field tags to map env variables to fields wihin a struct
+```bash
+export MY_ENV_VAR=1
+```
+```go
+type StructType struct {
+	Field int `envcfg:"MY_ENV_VAR"`
+}
+```
 
+`envcfg.Unmarshal` also supports `[]int`, `[]string`, `[]bool` slices. Values of the slice are ordered in respect to env name suffix. See example below.
+```bash
+export CASSANDRA_HOST_1="192.168.0.20" # *_1 will come as the first element of the slice
+export CASSANDRA_HOST_2="192.168.0.21"
+export CASSANDRA_HOST_3="192.168.0.22"
+```
+```go
+type StructType struct {
+	CASSANDRA_HOST []string
+}
+func main() {
+	var config StructType
+	envcfg.Unmarshal(&config)
+	// config.CASSANDRA_HOST is now set to []string{"192.168.0.20", "192.168.0.21", "192.168.0.22"} 
+}
+```
+## Contributing
+Send me a pull request and make sure tests pass on [wercker](https://app.wercker.com/#applications/547cd3626b3ba8733d14f613).
 
+## Licence
 
-
-
+See LICENCE file
