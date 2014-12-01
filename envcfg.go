@@ -145,6 +145,9 @@ func unmarshalSlice(fieldVal reflect.Value, structField reflect.StructField, env
 }
 
 func unmarshalSingleField(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+    if !fieldVal.CanSet() { // unexported field can not be set
+        return nil
+    }
     switch structField.Type.Kind() {
         case reflect.Int: return unmarshalInt(fieldVal, structField, env)
         case reflect.String: return unmarshalString(fieldVal, structField, env)

@@ -249,3 +249,49 @@ func TestUnmarshalSliceFail(t *testing.T) {
         t.Fatal("shoud fail on invalid int")
     }
 }
+
+
+type GeneralTest struct {
+    some_int int // unexported - will not be set 
+    SOME_INT int
+
+    SOME_STR string
+
+    SOME_BOOL bool
+
+    SOME_SLICE_BOOL []bool
+    SOME_SLICE_INT []int
+    SOME_SLICE_STRING []string
+
+    SOME_UNSET_FIELD string
+}
+
+func TestGeneral(t *testing.T) {
+    defer os.Clearenv()
+    setEnv(t, "some_int", "1") 
+    setEnv(t, "SOME_INT", "1")
+    setEnv(t, "SOME_STR", "1")
+    setEnv(t, "SOME_BOOL", "true")
+    setEnv(t, "SOME_SLICE_BOOL_a", "true")
+    setEnv(t, "SOME_SLICE_INT", "1")
+    setEnv(t, "SOME_SLICE_INT_1", "1")
+    setEnv(t, "SOME_SLICE_INT_2", "5")
+    setEnv(t, "SOME_SLICE_STRING", "foo")
+
+    var gt GeneralTest
+    if err := Unmarshal(&gt); err != nil {
+        t.Fatal("should not fail")
+    }
+    want := GeneralTest{
+        SOME_INT : 1,
+        SOME_STR : "1",
+        SOME_BOOL: true,
+        SOME_SLICE_BOOL: []bool{true},
+        SOME_SLICE_INT: []int{1,1,5},
+        SOME_SLICE_STRING: []string{"foo"},
+    }
+    if !reflect.DeepEqual(gt, want) {
+        t.Fatal("should be eq")
+    }
+
+}
