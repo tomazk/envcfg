@@ -267,7 +267,6 @@ type GeneralTest struct {
 }
 
 func TestGeneral(t *testing.T) {
-    t.FailNow()
     defer os.Clearenv()
     setEnv(t, "some_int", "1") 
     setEnv(t, "SOME_INT", "1")
