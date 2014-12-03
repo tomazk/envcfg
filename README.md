@@ -60,6 +60,8 @@ var val1 *StructType
 envcfg.Unmarshal(&val1) // val1 will be initialized
 ```
 
+#### Supported Struct Field Types 
+
 `envcfg.Unmarshal` supports `int`, `string`, `bool` and `[]int`, `[]string`, `[]bool` types of fields wihin a struct. It will return nil if a valid struct was passed or return an error if not.
 ```go
 type StructType struct {
@@ -71,6 +73,17 @@ type StructType struct {
 	SLICE_INT     []int
 }
 ```
+#### Validation
+`envcfg.Unmarshal` also spares you from writing type validation code:
+
+```go
+type StructType struct {
+	SHOULD_BE_INT int
+}
+```
+If you'll pass `export SHOULD_BE_INT="some_string_value"` to your application `envcfg.Unmarshal` will return an error.
+
+#### Struct Tags for Custom Mapping of env Variables
 You can also use struct field tags to map env variables to fields wihin a struct
 ```bash
 export MY_ENV_VAR=1
@@ -80,7 +93,7 @@ type StructType struct {
 	Field int `envcfg:"MY_ENV_VAR"`
 }
 ```
-
+#### Slices Support
 `envcfg.Unmarshal` also supports `[]int`, `[]string`, `[]bool` slices. Values of the slice are ordered in respect to env name suffix. See example below.
 ```bash
 export CASSANDRA_HOST_1="192.168.0.20" # *_1 will come as the first element of the slice
@@ -99,6 +112,13 @@ func main() {
 ```
 ## Contributing
 Send me a pull request and make sure tests pass on [wercker](https://app.wercker.com/#applications/547cd3626b3ba8733d14f613).
+
+## Tests
+
+Package comes with an extensive test suite that's continously run on wercker.
+```
+$ go test github.com/tomazk/envcfg
+```
 
 ## Licence
 
