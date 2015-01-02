@@ -1,4 +1,4 @@
-# envcfg [![wercker status](https://app.wercker.com/status/5ecc1b6d732792c4112e05d2d69334f3/s/master "wercker status")](https://app.wercker.com/project/bykey/5ecc1b6d732792c4112e05d2d69334f3)
+# envcfg [![wercker status](https://app.wercker.com/status/5ecc1b6d732792c4112e05d2d69334f3/s/master "wercker status")](https://app.wercker.com/project/bykey/5ecc1b6d732792c4112e05d2d69334f3) [![Build Status](https://travis-ci.org/tomazk/envcfg.svg?branch=master)](https://travis-ci.org/tomazk/envcfg)
 
 Un-marshaling environment variables to Go structs
 
@@ -110,11 +110,11 @@ func main() {
 }
 ```
 ## Contributing
-Send me a pull request and make sure tests pass on [wercker](https://app.wercker.com/#applications/547cd3626b3ba8733d14f613).
+Send me a pull request and make sure tests pass on [travis](https://travis-ci.org/tomazk/envcfg/).
 
 ## Tests
 
-Package comes with an extensive test suite that's continously run on wercker.
+Package comes with an extensive test suite that's continously run on travis against go versions: 1.3, 1.4 and the development tip.
 ```
 $ go test github.com/tomazk/envcfg
 ```
