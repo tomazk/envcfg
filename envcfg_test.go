@@ -116,6 +116,56 @@ func TestUnmarshalValidateType(t *testing.T) {
 	}
 }
 
+func TestClearEnvVarsSupportedType(t *testing.T) {
+	var p cfgValid1
+	if err := ClearEnvVars(p); err == nil {
+		t.Fatal("should fail since we didn't pass a reference")
+	}
+
+	var p1 cfgInvalid1
+	if err := ClearEnvVars(&p1); err == nil {
+		t.Fatal("should fail since we passed in an invalid struct")
+	}
+}
+
+type ClearEnvVarsType1 struct {
+	THIS string
+	THAT string `envcfgkeep:""`
+	Foo  string `envcfg:"FOO"`
+	Bar  string `envcfgkeep:"" envcfg:"BAR"`
+}
+
+func TestClearEnvVars(t *testing.T) {
+	setEnv(t, "THIS", "1")
+	setEnv(t, "THAT", "1")
+	setEnv(t, "FOO", "1")
+	setEnv(t, "BAR", "1")
+	defer os.Clearenv()
+
+	env, _ := newEnviron()
+	if !reflect.DeepEqual(env, environ{
+		"FOO":  "1",
+		"BAR":  "1",
+		"THIS": "1",
+		"THAT": "1",
+	}) {
+		t.FailNow()
+	}
+
+	ClearEnvVars(&ClearEnvVarsType1{})
+
+	env, _ = newEnviron()
+	if !reflect.DeepEqual(env, environ{
+		"FOO":  "",
+		"BAR":  "1",
+		"THIS": "",
+		"THAT": "1",
+	}) {
+		t.FailNow()
+	}
+
+}
+
 func TestUnmarshalInit(t *testing.T) {
 	var p *cfgValid1
 	Unmarshal(&p)

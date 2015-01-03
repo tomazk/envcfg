@@ -19,7 +19,7 @@ import "github.com/tomazk/envcfg"
 
 // declare a type that will hold your env variables
 type Cfg struct {
-	DEBUG bool
+	DEBUG   bool
 	DB_PORT int
 	DB_HOST string
 }
@@ -28,6 +28,9 @@ func main() {
 	var config Cfg
 	envcfg.Unmarshal(&config)
 	// config is now set to Config{DEBUG: false, DB_PORT: 8012, DB_HOST: "localhost"}
+	
+	// optional: clear env variables listed in the Cfg struct
+	envcfg.ClearEnvVars(&config)
 }
 ```
 ## Installation
@@ -44,6 +47,7 @@ Instead of having a bunch of `os.Getenv("ENV_VAR")` buried deep in your code whe
 
 1. **define a struct type** that will hold your environment variables and serve as documentation which env variables must be configured
 2. use **`envcfg.Unmarshal`** to read your env variables and unmarhsal them to an object that now holds your configuration of an app
+3. use **`envcfg.ClearEnvVars`** to unset env variables, removing potential vulnerability of passing secrets to unsafe child processes or vendor libraries that assume you're not storing unsafe values in the environment
 
 ## Documentation
 
@@ -109,6 +113,27 @@ func main() {
 	// config.CASSANDRA_HOST is now set to []string{"192.168.0.20", "192.168.0.21", "192.168.0.22"} 
 }
 ```
+### `envcfg.ClearEnvVars`
+
+`func Unmarshal(v interface{}) error` recieves a reference to the same struct you've passed to `envcfg.Unmarshal` and it will unset any environment variables listed in the struct. Except for those that you want to keep and are tagged with `envcfgkeep:""` struct field tag. It will throw an error on unsupported types.
+
+```bash
+export SECRET_AWS_KEY="foobar" 
+export PORT="8080" 
+```
+```go
+type StructType struct {
+	SECRET_AWS_KEY string
+	PORT           int    `envcfgkeep:""`
+}
+func main() {
+	var config StructType
+	envcfg.ClearEnvVars(&config)
+	// it will unset SECRET_AWS_KEY but keep env variable PORT
+}
+```
+
+
 ## Contributing
 Send me a pull request and make sure tests pass on [travis](https://travis-ci.org/tomazk/envcfg/).
 

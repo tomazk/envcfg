@@ -22,5 +22,8 @@ func main() {
 		fmt.Println("error when Unmarshal")
 		os.Exit(1)
 	}
+
+	envcfg.ClearEnvVars(&config)
+
 	fmt.Printf("%#v\n", config)
 }

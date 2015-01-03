@@ -28,8 +28,13 @@ Within your Go app do
 		var config Cfg
 		envcfg.Unmarshal(&config)
 		// config is now set to Config{DEBUG: false, DB_PORT: 8012, DB_HOST: "localhost"}
+
+		// optional: clear env variables listed in the Cfg struct
+		envcfg.ClearEnvVars(&config)
+
 	}
 
+More documentation in README: https://github.com/tomazk/envcfg
 */
 package envcfg
 
@@ -43,7 +48,10 @@ import (
 	"strings"
 )
 
-const structTag = "envcfg"
+const (
+	structTag     = "envcfg"
+	structTagKeep = "envcfgkeep"
+)
 
 // Unmarshal will read your environment variables and try to unmarshal them
 // to the passed struct. It will return an error, if it recieves an unsupported
@@ -72,6 +80,38 @@ func Unmarshal(v interface{}) error {
 	}
 
 	return nil
+}
+
+// ClearEnvVars will clear all environment variables based on the struct
+// field names or struct field tags. It will keep all those with
+// envcfgkeep:"" struct field tag. It will return an error,
+// if it recieves an unsupported non-struct type, if types of the
+// fields are not supported
+func ClearEnvVars(v interface{}) error {
+	structType, err := makeSureTypeIsSupported(v)
+	if err != nil {
+		return err
+	}
+	if err := makeSureStructFieldTypesAreSupported(structType); err != nil {
+		return err
+	}
+
+	unsetEnvVars(structType)
+	return nil
+}
+
+func unsetEnvVarFromSingleField(structField reflect.StructField) {
+	if strings.Contains(string(structField.Tag), structTagKeep) {
+		return
+	}
+	envKey := getEnvKey(structField)
+	os.Setenv(envKey, "") // we're using Setenv instead of Unsetenv to ensure go1.3 compatibility
+}
+
+func unsetEnvVars(structType reflect.Type) {
+	for i := 0; i < structType.NumField(); i++ {
+		unsetEnvVarFromSingleField(structType.Field(i))
+	}
 }
 
 func getEnvKey(structField reflect.StructField) string {
