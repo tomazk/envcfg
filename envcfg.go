@@ -28,8 +28,13 @@ Within your Go app do
 		var config Cfg
 		envcfg.Unmarshal(&config)
 		// config is now set to Config{DEBUG: false, DB_PORT: 8012, DB_HOST: "localhost"}
+
+		// optional: clear env variables listed in the Cfg struct
+		envcfg.ClearEnvVars(&config)
+
 	}
 
+More documentation in README: https://github.com/tomazk/envcfg
 */
 package envcfg
 
