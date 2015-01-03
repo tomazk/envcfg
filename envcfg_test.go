@@ -142,22 +142,24 @@ func TestClearEnvVars(t *testing.T) {
 	setEnv(t, "BAR", "1")
 	defer os.Clearenv()
 
-	environNames, _ := getAllEnvironNames(os.Environ())
-	if !reflect.DeepEqual(environNames, map[string]struct{}{
-		"FOO":  struct{}{},
-		"BAR":  struct{}{},
-		"THIS": struct{}{},
-		"THAT": struct{}{},
+	env, _ := newEnviron()
+	if !reflect.DeepEqual(env, environ{
+		"FOO":  "1",
+		"BAR":  "1",
+		"THIS": "1",
+		"THAT": "1",
 	}) {
 		t.FailNow()
 	}
 
 	ClearEnvVars(&ClearEnvVarsType1{})
 
-	environNames, _ = getAllEnvironNames(os.Environ())
-	if !reflect.DeepEqual(environNames, map[string]struct{}{
-		"BAR":  struct{}{},
-		"THAT": struct{}{},
+	env, _ = newEnviron()
+	if !reflect.DeepEqual(env, environ{
+		"FOO":  "",
+		"BAR":  "1",
+		"THIS": "",
+		"THAT": "1",
 	}) {
 		t.FailNow()
 	}

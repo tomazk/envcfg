@@ -84,7 +84,7 @@ func Unmarshal(v interface{}) error {
 
 // ClearEnvVars will clear all environment variables based on the struct
 // field names or struct field tags. It will keep all those with
-// envcfg_keep:"" struct field tag. It will return an error,
+// envcfgkeep:"" struct field tag. It will return an error,
 // if it recieves an unsupported non-struct type, if types of the
 // fields are not supported
 func ClearEnvVars(v interface{}) error {
@@ -105,7 +105,7 @@ func unsetEnvVarFromSingleField(structField reflect.StructField) {
 		return
 	}
 	envKey := getEnvKey(structField)
-	os.Unsetenv(envKey)
+	os.Setenv(envKey, "") // we're using Setenv instead of Unsetenv to ensure go1.3 compatibility
 }
 
 func unsetEnvVars(structType reflect.Type) {
