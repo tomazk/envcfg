@@ -115,7 +115,7 @@ func main() {
 ```
 ### `envcfg.ClearEnvVars`
 
-`func Unmarshal(v interface{}) error` recieves a reference to the same struct you've passed to `envcfg.Unmarshal` and it will unset any environment variables listed in the struct. Except for those that you want to keep and are tagged with `envcfgkeep:""` struct field tag. It will throw an error on unsupported types.
+`func ClearEnvVars(v interface{}) error` recieves a reference to the same struct you've passed to `envcfg.Unmarshal` and it will unset any environment variables listed in the struct. Except for those that you want to keep and are tagged with `envcfgkeep:""` struct field tag. It will throw an error on unsupported types.
 
 ```bash
 export SECRET_AWS_KEY="foobar" 
