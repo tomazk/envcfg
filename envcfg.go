@@ -43,7 +43,10 @@ import (
 	"strings"
 )
 
-const structTag = "envcfg"
+const (
+	structTag     = "envcfg"
+	structTagKeep = "envcfgkeep"
+)
 
 // Unmarshal will read your environment variables and try to unmarshal them
 // to the passed struct. It will return an error, if it recieves an unsupported
@@ -72,6 +75,38 @@ func Unmarshal(v interface{}) error {
 	}
 
 	return nil
+}
+
+// ClearEnvVars will clear all environment variables based on the struct
+// field names or struct field tags. It will keep all those with
+// envcfg_keep:"" struct field tag. It will return an error,
+// if it recieves an unsupported non-struct type, if types of the
+// fields are not supported
+func ClearEnvVars(v interface{}) error {
+	structType, err := makeSureTypeIsSupported(v)
+	if err != nil {
+		return err
+	}
+	if err := makeSureStructFieldTypesAreSupported(structType); err != nil {
+		return err
+	}
+
+	unsetEnvVars(structType)
+	return nil
+}
+
+func unsetEnvVarFromSingleField(structField reflect.StructField) {
+	if strings.Contains(string(structField.Tag), structTagKeep) {
+		return
+	}
+	envKey := getEnvKey(structField)
+	os.Unsetenv(envKey)
+}
+
+func unsetEnvVars(structType reflect.Type) {
+	for i := 0; i < structType.NumField(); i++ {
+		unsetEnvVarFromSingleField(structType.Field(i))
+	}
 }
 
 func getEnvKey(structField reflect.StructField) string {
