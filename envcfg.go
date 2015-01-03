@@ -1,3 +1,36 @@
+/*
+
+Un-marshaling environment variables to Go structs
+
+Getting Started
+
+Let's set a bunch of environment variables and then run your go app
+
+	#!/usr/bin/env bash
+	export DEBUG="false"
+	export DB_HOST="localhost"
+	export DB_PORT="8012"
+
+	./your_go_app
+
+Within your Go app do
+
+	import "github.com/tomazk/envcfg"
+
+	// declare a type that will hold your env variables
+	type Cfg struct {
+		DEBUG bool
+		DB_PORT int
+		DB_HOST string
+	}
+
+	func main() {
+		var config Cfg
+		envcfg.Unmarshal(&config)
+		// config is now set to Config{DEBUG: false, DB_PORT: 8012, DB_HOST: "localhost"}
+	}
+
+*/
 package envcfg
 
 import (
@@ -12,6 +45,11 @@ import (
 
 const structTag = "envcfg"
 
+// Unmarshal will read your environment variables and try to unmarshal them
+// to the passed struct. It will return an error, if it recieves an unsupported
+// non-struct type, if types of the fields are not supported or if it can't
+// parse value from an environment variable, thus taking care of validation of
+// environment variables values.
 func Unmarshal(v interface{}) error {
 	structType, err := makeSureTypeIsSupported(v)
 	if err != nil {
