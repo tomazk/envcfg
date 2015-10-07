@@ -139,7 +139,7 @@ Send me a pull request and make sure tests pass on [travis](https://travis-ci.or
 
 ## Tests
 
-Package comes with an extensive test suite that's continously run on travis against go versions: 1.3, 1.4 and the development tip.
+Package comes with an extensive test suite that's continuously run on travis against go versions: 1.3, 1.4 and the development tip.
 ```
 $ go test github.com/tomazk/envcfg
 ```
