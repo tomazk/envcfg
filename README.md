@@ -26,7 +26,7 @@ type Cfg struct {
 
 func main() {
 	var config Cfg
-  failOnUndefined := false
+	failOnUndefined := false
 	envcfg.Unmarshal(&config, failOnUndefined)
 	// config is now set to Config{DEBUG: false, DB_PORT: 8012, DB_HOST: "localhost"}
 	
@@ -112,7 +112,7 @@ type StructType struct {
 }
 func main() {
 	var config StructType
-  failOnUndefined := false
+	failOnUndefined := false
 	envcfg.Unmarshal(&config, failOnUndefined)
 	// config.CASSANDRA_HOST is now set to []string{"192.168.0.20", "192.168.0.21", "192.168.0.22"} 
 }
