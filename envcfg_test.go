@@ -78,39 +78,39 @@ type cfgInvalid2 struct {
 func TestUnmarshalValidateType(t *testing.T) {
 
 	var i int
-	if err := Unmarshal(i); err == nil {
+	if err := Unmarshal(i, false); err == nil {
 		t.Fatal("should fail if we don't pass addressable value")
 	}
 
 	var p *cfgValid1
-	if err := Unmarshal(p); err == nil {
+	if err := Unmarshal(p, false); err == nil {
 		t.Fatal("pointer type: should fail if we don't pass addressable value")
 	}
-	if err := Unmarshal(&p); err != nil {
+	if err := Unmarshal(&p, false); err != nil {
 		t.Fatal("pointer type: should not fail since passed an addressable value")
 	}
 
 	var v cfgValid1
-	if err := Unmarshal(&v); err != nil {
+	if err := Unmarshal(&v, false); err != nil {
 		t.Fatal("should not fail since we passed a valid value addressable")
 	}
-	if err := Unmarshal(v); err == nil {
+	if err := Unmarshal(v, false); err == nil {
 		t.Fatal("should fail since we did not pass an addressable value")
 	}
 
 	var v1 cfgValid2
-	if err := Unmarshal(&v1); err != nil {
+	if err := Unmarshal(&v1, false); err != nil {
 		t.Fatal("should not fail since we passed another valid value")
 	}
 
 	var inv1 cfgInvalid1
-	if err := Unmarshal(&inv1); err == nil {
+	if err := Unmarshal(&inv1, false); err == nil {
 		t.Log(err)
 		t.Fatal("should fail due to invalid struct type")
 	}
 
 	var inv2 cfgInvalid2
-	if err := Unmarshal(&inv2); err == nil {
+	if err := Unmarshal(&inv2, false); err == nil {
 		t.Log(err)
 		t.Fatal("should fail due to invalid struct type - second case")
 	}
@@ -168,13 +168,13 @@ func TestClearEnvVars(t *testing.T) {
 
 func TestUnmarshalInit(t *testing.T) {
 	var p *cfgValid1
-	Unmarshal(&p)
+	Unmarshal(&p, false)
 	if !reflect.DeepEqual(p, new(cfgValid1)) {
 		t.Fatal("should be initialized")
 	}
 
 	var v cfgValid1
-	Unmarshal(&v) // shouldn't panic
+	Unmarshal(&v, false) // shouldn't panic
 }
 
 type IntType struct {
@@ -192,20 +192,31 @@ func TestUnmarshalSetInt(t *testing.T) {
 	defer os.Clearenv()
 
 	var i IntType
-	Unmarshal(&i)
+	Unmarshal(&i, false)
 	if !reflect.DeepEqual(IntType{0, 1, 2, 3, 3}, i) {
 		t.Fatal("should be eq")
 	}
 
 	var p *IntType
-	Unmarshal(&p)
+	Unmarshal(&p, false)
 	if !reflect.DeepEqual(&IntType{0, 1, 2, 3, 3}, p) {
 		t.Fatal("should be eq")
 	}
 
 	setEnv(t, "INT_1", "invalid")
-	if err := Unmarshal(&i); err == nil {
+	if err := Unmarshal(&i, false); err == nil {
 		t.Fatal("should throw an error since we passed an invalid int value")
+	}
+}
+
+func TestUnmarshalIntFailOnUndefined(t *testing.T) {
+	setEnv(t, "INT_1", "1")
+	setEnv(t, "INT_2", "2")
+	defer os.Clearenv()
+
+	var i IntType
+	if err := Unmarshal(&i, true); err == nil {
+		t.Fatal("undefined variables should cause error")
 	}
 }
 
@@ -224,9 +235,21 @@ func TestUnmarshalString(t *testing.T) {
 	defer os.Clearenv()
 
 	var s StringType
-	Unmarshal(&s)
+	Unmarshal(&s, false)
 	if !reflect.DeepEqual(StringType{"", "s1", "s2", "s3", "s3"}, s) {
 		t.Fatal("should be equal")
+	}
+}
+
+func TestUnmarshalStringFailOnUndefined(t *testing.T) {
+	setEnv(t, "STR_1", "s1")
+	setEnv(t, "STR_2", "s2")
+	setEnv(t, "LABEL_STR", "s3")
+	defer os.Clearenv()
+
+	var s StringType
+	if err := Unmarshal(&s, true); err == nil {
+		t.Fatal("undefined variables should cause error")
 	}
 }
 
@@ -242,15 +265,26 @@ func TestUnmarshalBool(t *testing.T) {
 	defer os.Clearenv()
 
 	var b BoolType
-	Unmarshal(&b)
+	Unmarshal(&b, false)
 	if !reflect.DeepEqual(BoolType{false, true, true}, b) {
 		t.Log(b)
 		t.Fatal("should be equal")
 	}
 
 	setEnv(t, "LABEL_BOOL", "invalid")
-	if err := Unmarshal(&b); err == nil {
+	if err := Unmarshal(&b, false); err == nil {
 		t.Fatal("should fail")
+	}
+}
+
+func TestUnmarshalBoolFailOnUndefined(t *testing.T) {
+	setEnv(t, "BOOL_1", "true")
+	setEnv(t, "LABEL_BOOL", "true")
+	defer os.Clearenv()
+
+	var b BoolType
+	if err := Unmarshal(&b, true); err == nil {
+		t.Fatal("undefined variables should cause error")
 	}
 }
 
@@ -270,7 +304,7 @@ func TestUnmarshalSlice(t *testing.T) {
 	defer os.Clearenv()
 
 	var s SliceType
-	Unmarshal(&s)
+	Unmarshal(&s, false)
 	if !reflect.DeepEqual(s, SliceType{[]string{"foo", "bar"}, []int{1, 2}, []bool{true, false}}) {
 		t.Fatal("should be equal")
 	}
@@ -282,14 +316,27 @@ func TestUnmarshalSliceFail(t *testing.T) {
 	setEnv(t, "SLICE_BOOL_2", "invalid")
 	var s SliceType
 
-	if err := Unmarshal(&s); err == nil {
+	if err := Unmarshal(&s, false); err == nil {
 		t.Fatal("should fail on an invalid bool value")
 	}
 	os.Clearenv()
 
 	setEnv(t, "SLICE_INT_1", "invalid")
-	if err := Unmarshal(&s); err == nil {
+	if err := Unmarshal(&s, false); err == nil {
 		t.Fatal("shoud fail on invalid int")
+	}
+}
+
+func TestUnmarshalSliceFailUndefined(t *testing.T) {
+	defer os.Clearenv()
+	setEnv(t, "SLICE_STR_1", "foo")
+	setEnv(t, "SLICE_STR_2", "bar")
+	setEnv(t, "SLICE_INT_1", "1")
+	setEnv(t, "SLICE_INT_2", "2")
+	var s SliceType
+
+	if err := Unmarshal(&s, true); err == nil {
+		t.Fatal("should fail on missing environment variable")
 	}
 }
 
@@ -322,7 +369,7 @@ func TestGeneral(t *testing.T) {
 	setEnv(t, "SOME_SLICE_STRING", "foo${BAR}")
 
 	var gt GeneralTest
-	if err := Unmarshal(&gt); err != nil {
+	if err := Unmarshal(&gt, false); err != nil {
 		t.Fatal("should not fail")
 	}
 	want := GeneralTest{
