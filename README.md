@@ -26,7 +26,8 @@ type Cfg struct {
 
 func main() {
 	var config Cfg
-	envcfg.Unmarshal(&config)
+  failOnUndefined := false
+	envcfg.Unmarshal(&config, failOnUndefined)
 	// config is now set to Config{DEBUG: false, DB_PORT: 8012, DB_HOST: "localhost"}
 	
 	// optional: clear env variables listed in the Cfg struct
@@ -53,14 +54,16 @@ Instead of having a bunch of `os.Getenv("ENV_VAR")` buried deep in your code whe
 
 ### `envcfg.Unmarshal`
 
-`func Unmarshal(v interface{}) error` can recieve a reference to an object or even a reference to a pointer:
+`func Unmarshal(v interface{}, failOnUndefined bool) error` can recieve a reference to an object or even a reference to a pointer:
 
 ```go
 var val2 StructType
-envcfg.Unmarshal(&val2)
+failOnUndefined := false
+envcfg.Unmarshal(&val2, failOnUndefined)
 
 var val1 *StructType 
-envcfg.Unmarshal(&val1) // val1 will be initialized
+failOnUndefined := false
+envcfg.Unmarshal(&val1, failOnUndefined) // val1 will be initialized
 ```
 
 #### Supported Struct Field Types 
@@ -109,7 +112,8 @@ type StructType struct {
 }
 func main() {
 	var config StructType
-	envcfg.Unmarshal(&config)
+  failOnUndefined := false
+	envcfg.Unmarshal(&config, failOnUndefined)
 	// config.CASSANDRA_HOST is now set to []string{"192.168.0.20", "192.168.0.21", "192.168.0.22"} 
 }
 ```
