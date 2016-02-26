@@ -39,6 +39,7 @@ More documentation in README: https://github.com/tomazk/envcfg
 package envcfg
 
 import (
+	"encoding"
 	"errors"
 	"fmt"
 	"os"
@@ -52,6 +53,8 @@ const (
 	structTag     = "envcfg"
 	structTagKeep = "envcfgkeep"
 )
+
+var textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 
 // Unmarshal will read your environment variables and try to unmarshal them
 // to the passed struct. It will return an error, if it recieves an unsupported
@@ -168,6 +171,16 @@ func unmarshalString(fieldVal reflect.Value, structField reflect.StructField, en
 	return nil
 }
 
+func unmarshalTextUnmarshaler(fieldVal encoding.TextUnmarshaler, structField reflect.StructField, env environ) error {
+	val, ok := env[getEnvKey(structField)]
+	if !ok {
+		return nil
+	}
+
+	fieldVal.UnmarshalText([]byte(val))
+	return nil
+}
+
 func appendToStringSlice(fieldVal reflect.Value, sliceVal string) error {
 	fieldVal.Set(reflect.Append(fieldVal, reflect.ValueOf(sliceVal)))
 	return nil
@@ -233,6 +246,10 @@ func unmarshalSingleField(fieldVal reflect.Value, structField reflect.StructFiel
 	if !fieldVal.CanSet() { // unexported field can not be set
 		return nil
 	}
+	// special case for structs that implement TextUnmarshaler interface
+	if v, ok := fieldVal.Interface().(encoding.TextUnmarshaler); ok {
+		return unmarshalTextUnmarshaler(v, structField, env)
+	}
 	switch structField.Type.Kind() {
 	case reflect.Int:
 		return unmarshalInt(fieldVal, structField, env)
@@ -288,6 +305,10 @@ func makeSureTypeIsSupported(v interface{}) (reflect.Type, error) {
 }
 
 func isSupportedStructField(k reflect.StructField) bool {
+	// special case for types that implement TextUnmarshaler interface
+	if k.Type.Implements(textUnmarshalerType) || reflect.PtrTo(k.Type).Implements(textUnmarshalerType) {
+		return true
+	}
 	switch k.Type.Kind() {
 	case reflect.String:
 		return true

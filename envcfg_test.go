@@ -67,6 +67,20 @@ type cfgValid2 struct {
 	INT       validType
 }
 
+type validTextUnmarshaler struct {
+	FLOAT float64
+}
+
+func (s *validTextUnmarshaler) UnmarshalText(text []byte) error {
+	s.FLOAT = 1.0
+	return nil
+}
+
+type cfgValid3 struct {
+	TEXT_UNMARSHALER     validTextUnmarshaler
+	TEXT_UNMARSHALER_PTR *validTextUnmarshaler
+}
+
 type cfgInvalid1 struct {
 	FLOAT float64
 }
@@ -101,6 +115,12 @@ func TestUnmarshalValidateType(t *testing.T) {
 	var v1 cfgValid2
 	if err := Unmarshal(&v1); err != nil {
 		t.Fatal("should not fail since we passed another valid value")
+	}
+
+	var v2 cfgValid3
+	if err := Unmarshal(&v2); err != nil {
+		// t.Fatal("should not fail since we passed another valid value")
+		t.Fatal(err)
 	}
 
 	var inv1 cfgInvalid1
