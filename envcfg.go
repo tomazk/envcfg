@@ -56,6 +56,10 @@ const (
 
 var textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 
+func isTextUnmarshaler(t reflect.Type) bool {
+	return t.Implements(textUnmarshalerType) || reflect.PtrTo(t).Implements(textUnmarshalerType)
+}
+
 // Unmarshal will read your environment variables and try to unmarshal them
 // to the passed struct. It will return an error, if it recieves an unsupported
 // non-struct type, if types of the fields are not supported or if it can't
@@ -171,18 +175,27 @@ func unmarshalString(fieldVal reflect.Value, structField reflect.StructField, en
 	return nil
 }
 
-func unmarshalTextUnmarshaler(fieldVal encoding.TextUnmarshaler, structField reflect.StructField, env environ) error {
+func unmarshalTextUnmarshaler(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
 	val, ok := env[getEnvKey(structField)]
 	if !ok {
 		return nil
 	}
 
-	fieldVal.UnmarshalText([]byte(val))
+	textUnmarshaler := fieldVal.Addr().Interface().(encoding.TextUnmarshaler)
+	textUnmarshaler.UnmarshalText([]byte(val))
 	return nil
 }
 
 func appendToStringSlice(fieldVal reflect.Value, sliceVal string) error {
 	fieldVal.Set(reflect.Append(fieldVal, reflect.ValueOf(sliceVal)))
+	return nil
+}
+
+func appendToTextUnmarshalerSlice(fieldVal reflect.Value, sliceVal string) error {
+	sliceElem := reflect.New(fieldVal.Type().Elem())
+	textUnmarshaler := sliceElem.Interface().(encoding.TextUnmarshaler)
+	textUnmarshaler.UnmarshalText([]byte(sliceVal))
+	fieldVal.Set(reflect.Append(fieldVal, sliceElem.Elem()))
 	return nil
 }
 
@@ -226,6 +239,13 @@ func unmarshalSlice(fieldVal reflect.Value, structField reflect.StructField, env
 		if !ok {
 			continue
 		}
+		if isTextUnmarshaler(structField.Type.Elem()) {
+			err = appendToTextUnmarshalerSlice(fieldVal, val)
+			if err != nil {
+				return err
+			}
+			continue
+		}
 		switch structField.Type.Elem().Kind() {
 		case reflect.String:
 			err = appendToStringSlice(fieldVal, val)
@@ -247,8 +267,8 @@ func unmarshalSingleField(fieldVal reflect.Value, structField reflect.StructFiel
 		return nil
 	}
 	// special case for structs that implement TextUnmarshaler interface
-	if v, ok := fieldVal.Interface().(encoding.TextUnmarshaler); ok {
-		return unmarshalTextUnmarshaler(v, structField, env)
+	if isTextUnmarshaler(structField.Type) {
+		return unmarshalTextUnmarshaler(fieldVal, structField, env)
 	}
 	switch structField.Type.Kind() {
 	case reflect.Int:
@@ -306,7 +326,7 @@ func makeSureTypeIsSupported(v interface{}) (reflect.Type, error) {
 
 func isSupportedStructField(k reflect.StructField) bool {
 	// special case for types that implement TextUnmarshaler interface
-	if k.Type.Implements(textUnmarshalerType) || reflect.PtrTo(k.Type).Implements(textUnmarshalerType) {
+	if isTextUnmarshaler(k.Type) {
 		return true
 	}
 	switch k.Type.Kind() {
@@ -317,6 +337,11 @@ func isSupportedStructField(k reflect.StructField) bool {
 	case reflect.Int:
 		return true
 	case reflect.Slice:
+		// special case for types that implement TextUnmarshaler interface
+		if isTextUnmarshaler(k.Type.Elem()) {
+			return true
+		}
+
 		switch k.Type.Elem().Kind() {
 		case reflect.String:
 			return true

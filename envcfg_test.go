@@ -68,17 +68,19 @@ type cfgValid2 struct {
 }
 
 type validTextUnmarshaler struct {
-	FLOAT float64
+	DummyFloat float64
 }
 
 func (s *validTextUnmarshaler) UnmarshalText(text []byte) error {
-	s.FLOAT = 1.0
+	s.DummyFloat = 1.0
 	return nil
 }
 
 type cfgValid3 struct {
-	TEXT_UNMARSHALER     validTextUnmarshaler
-	TEXT_UNMARSHALER_PTR *validTextUnmarshaler
+	TEXT_UNMARSHALER           validTextUnmarshaler
+	TEXT_UNMARSHALER_PTR       *validTextUnmarshaler
+	TEXT_UNMARSHALER_SLICE     []validTextUnmarshaler
+	TEXT_UNMARSHALER_SLICE_PTR []*validTextUnmarshaler
 }
 
 type cfgInvalid1 struct {
@@ -119,8 +121,7 @@ func TestUnmarshalValidateType(t *testing.T) {
 
 	var v2 cfgValid3
 	if err := Unmarshal(&v2); err != nil {
-		// t.Fatal("should not fail since we passed another valid value")
-		t.Fatal(err)
+		t.Fatal("should not fail since we passed another valid value")
 	}
 
 	var inv1 cfgInvalid1
@@ -274,10 +275,24 @@ func TestUnmarshalBool(t *testing.T) {
 	}
 }
 
+type TextUnmarshalerType struct {
+	TEXT_UNMARSHALER validTextUnmarshaler
+}
+
+func TestUnmarshalTextUnmarshaler(t *testing.T) {
+	setEnv(t, "TEXT_UNMARSHALER", "abc")
+	var v TextUnmarshalerType
+	Unmarshal(&v)
+	if v.TEXT_UNMARSHALER.DummyFloat != 1.0 {
+		t.Fatal("unmarshalled value should be correct")
+	}
+}
+
 type SliceType struct {
-	SLICE_STR  []string
-	SLICE_INT  []int
-	SLICE_BOOL []bool
+	SLICE_STR              []string
+	SLICE_INT              []int
+	SLICE_BOOL             []bool
+	SLICE_TEXT_UNMARSHALER []validTextUnmarshaler
 }
 
 func TestUnmarshalSlice(t *testing.T) {
@@ -287,11 +302,14 @@ func TestUnmarshalSlice(t *testing.T) {
 	setEnv(t, "SLICE_INT_2", "2")
 	setEnv(t, "SLICE_BOOL_1", "true")
 	setEnv(t, "SLICE_BOOL_2", "false")
+	setEnv(t, "SLICE_TEXT_UNMARSHALER_1", "abc")
+	setEnv(t, "SLICE_TEXT_UNMARSHALER_2", "cde")
 	defer os.Clearenv()
 
 	var s SliceType
 	Unmarshal(&s)
-	if !reflect.DeepEqual(s, SliceType{[]string{"foo", "bar"}, []int{1, 2}, []bool{true, false}}) {
+	if !reflect.DeepEqual(s, SliceType{[]string{"foo", "bar"}, []int{1, 2}, []bool{true, false}, []validTextUnmarshaler{{1.0}, {1.0}}}) {
+		t.Log(s)
 		t.Fatal("should be equal")
 	}
 }
