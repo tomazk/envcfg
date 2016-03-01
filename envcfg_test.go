@@ -68,11 +68,11 @@ type cfgValid2 struct {
 }
 
 type validTextUnmarshaler struct {
-	DummyFloat float64
+	MyText string
 }
 
 func (s *validTextUnmarshaler) UnmarshalText(text []byte) error {
-	s.DummyFloat = 1.0
+	s.MyText = "my" + string(text)
 	return nil
 }
 
@@ -283,7 +283,7 @@ func TestUnmarshalTextUnmarshaler(t *testing.T) {
 	setEnv(t, "TEXT_UNMARSHALER", "abc")
 	var v TextUnmarshalerType
 	Unmarshal(&v)
-	if v.TEXT_UNMARSHALER.DummyFloat != 1.0 {
+	if v.TEXT_UNMARSHALER.MyText != "myabc" {
 		t.Fatal("unmarshalled value should be correct")
 	}
 }
@@ -308,7 +308,7 @@ func TestUnmarshalSlice(t *testing.T) {
 
 	var s SliceType
 	Unmarshal(&s)
-	if !reflect.DeepEqual(s, SliceType{[]string{"foo", "bar"}, []int{1, 2}, []bool{true, false}, []validTextUnmarshaler{{1.0}, {1.0}}}) {
+	if !reflect.DeepEqual(s, SliceType{[]string{"foo", "bar"}, []int{1, 2}, []bool{true, false}, []validTextUnmarshaler{{"myabc"}, {"mycde"}}}) {
 		t.Log(s)
 		t.Fatal("should be equal")
 	}
