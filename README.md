@@ -65,7 +65,8 @@ envcfg.Unmarshal(&val1) // val1 will be initialized
 
 #### Supported Struct Field Types 
 
-`envcfg.Unmarshal` supports `int`, `string`, `bool` and `[]int`, `[]string`, `[]bool` types of fields wihin a struct. It will return nil if a valid struct was passed or return an error if not.
+`envcfg.Unmarshal` supports `int`, `string`, `bool` and `[]int`, `[]string`, `[]bool` types of fields wihin a struct. In addition, fields that satisfy the `encoding.TextUnmarshaler` interface are also supported. `envcfg.Unmarshal` will return nil if a valid struct was passed or return an error if not.
+
 ```go
 type StructType struct {
 	INT           int
@@ -74,6 +75,12 @@ type StructType struct {
 	SLICE_STRING  []string
 	SLICE_BOOL    []bool
 	SLICE_INT     []int
+	CUSTOM_TYPE   MyType
+}
+
+type MyType struct{}
+func (mt *MyType) UnmarshalText(text []byte) error {
+	...
 }
 ```
 #### Validation
@@ -139,7 +146,7 @@ Send me a pull request and make sure tests pass on [travis](https://travis-ci.or
 
 ## Tests
 
-Package comes with an extensive test suite that's continuously run on travis against go versions: 1.3, 1.4 and the development tip.
+Package comes with an extensive test suite that's continuously run on travis against go versions: 1.3, 1.4, 1.5, 1.6 and the development tip.
 ```
 $ go test github.com/tomazk/envcfg
 ```

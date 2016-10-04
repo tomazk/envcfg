@@ -67,6 +67,22 @@ type cfgValid2 struct {
 	INT       validType
 }
 
+type validTextUnmarshaler struct {
+	MyText string
+}
+
+func (s *validTextUnmarshaler) UnmarshalText(text []byte) error {
+	s.MyText = "my" + string(text)
+	return nil
+}
+
+type cfgValid3 struct {
+	TEXT_UNMARSHALER           validTextUnmarshaler
+	TEXT_UNMARSHALER_PTR       *validTextUnmarshaler
+	TEXT_UNMARSHALER_SLICE     []validTextUnmarshaler
+	TEXT_UNMARSHALER_SLICE_PTR []*validTextUnmarshaler
+}
+
 type cfgInvalid1 struct {
 	FLOAT float64
 }
@@ -100,6 +116,11 @@ func TestUnmarshalValidateType(t *testing.T) {
 
 	var v1 cfgValid2
 	if err := Unmarshal(&v1); err != nil {
+		t.Fatal("should not fail since we passed another valid value")
+	}
+
+	var v2 cfgValid3
+	if err := Unmarshal(&v2); err != nil {
 		t.Fatal("should not fail since we passed another valid value")
 	}
 
@@ -254,10 +275,24 @@ func TestUnmarshalBool(t *testing.T) {
 	}
 }
 
+type TextUnmarshalerType struct {
+	TEXT_UNMARSHALER validTextUnmarshaler
+}
+
+func TestUnmarshalTextUnmarshaler(t *testing.T) {
+	setEnv(t, "TEXT_UNMARSHALER", "abc")
+	var v TextUnmarshalerType
+	Unmarshal(&v)
+	if v.TEXT_UNMARSHALER.MyText != "myabc" {
+		t.Fatal("unmarshalled value should be correct")
+	}
+}
+
 type SliceType struct {
-	SLICE_STR  []string
-	SLICE_INT  []int
-	SLICE_BOOL []bool
+	SLICE_STR              []string
+	SLICE_INT              []int
+	SLICE_BOOL             []bool
+	SLICE_TEXT_UNMARSHALER []validTextUnmarshaler
 }
 
 func TestUnmarshalSlice(t *testing.T) {
@@ -267,11 +302,14 @@ func TestUnmarshalSlice(t *testing.T) {
 	setEnv(t, "SLICE_INT_2", "2")
 	setEnv(t, "SLICE_BOOL_1", "true")
 	setEnv(t, "SLICE_BOOL_2", "false")
+	setEnv(t, "SLICE_TEXT_UNMARSHALER_1", "abc")
+	setEnv(t, "SLICE_TEXT_UNMARSHALER_2", "cde")
 	defer os.Clearenv()
 
 	var s SliceType
 	Unmarshal(&s)
-	if !reflect.DeepEqual(s, SliceType{[]string{"foo", "bar"}, []int{1, 2}, []bool{true, false}}) {
+	if !reflect.DeepEqual(s, SliceType{[]string{"foo", "bar"}, []int{1, 2}, []bool{true, false}, []validTextUnmarshaler{{"myabc"}, {"mycde"}}}) {
+		t.Log(s)
 		t.Fatal("should be equal")
 	}
 }
