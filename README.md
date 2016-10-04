@@ -93,6 +93,31 @@ type StructType struct {
 ```
 If you'll pass `export SHOULD_BE_INT="some_string_value"` to your application `envcfg.Unmarshal` will return an error.
 
+##### Undefined Variables
+`EnvUnmarshaler.Unmarshal` can also be set to fail on undefined variables:
+
+```go
+package main
+
+import (
+	"github.com/tomazk/envcfg"
+	"log"
+)
+
+type StructType struct {
+	MUST_BE_IN_ENVIRONMENT int
+}
+
+func main() {
+	u := envcfg.NewUnmarshaler().FailOnUndefined()
+	err := u.Unmarshal(&StructType)
+	if err {
+		log.Fatal(err)
+	}
+}
+```
+If you run this program without `MUST_BE_IN_ENVIRONMENT` defined in the environment, then it will exit with the error
+
 #### Struct Tags for Custom Mapping of env Variables
 You can also use struct field tags to map env variables to fields wihin a struct
 ```bash

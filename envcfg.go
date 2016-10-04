@@ -60,12 +60,34 @@ func isTextUnmarshaler(t reflect.Type) bool {
 	return t.Implements(textUnmarshalerType) || reflect.PtrTo(t).Implements(textUnmarshalerType)
 }
 
+// Unmarshaler will unmarshal environment variables into the given struct
+type Unmarshaler interface {
+	Unmarshal(interface{}) error
+}
+
+// EnvUnmarshaler holds unmarshaling settings and implements the Unmarshaler interface
+type EnvUnmarshaler struct {
+	failOnUndefined bool
+}
+
+// NewUnmarshaler returns new EnvUnmarshaler
+func NewUnmarshaler() EnvUnmarshaler {
+	return EnvUnmarshaler{}
+}
+
+// FailOnUndefined will cause Unmarshal to fail if an environment variable is
+// not defined instead of setting it to the types default value
+func (e EnvUnmarshaler) FailOnUndefined() EnvUnmarshaler {
+	e.failOnUndefined = true
+	return e
+}
+
 // Unmarshal will read your environment variables and try to unmarshal them
 // to the passed struct. It will return an error, if it recieves an unsupported
 // non-struct type, if types of the fields are not supported or if it can't
 // parse value from an environment variable, thus taking care of validation of
 // environment variables values.
-func Unmarshal(v interface{}) error {
+func (e EnvUnmarshaler) Unmarshal(v interface{}) error {
 	structType, err := makeSureTypeIsSupported(v)
 	if err != nil {
 		return err
@@ -82,11 +104,21 @@ func Unmarshal(v interface{}) error {
 
 	structVal := getStructValue(v)
 
-	if err := unmarshalAllStructFields(structVal, env); err != nil {
+	if err := e.unmarshalAllStructFields(structVal, env); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// Unmarshal will read your environment variables and try to unmarshal them
+// to the passed struct. It will return an error, if it recieves an unsupported
+// non-struct type, if types of the fields are not supported or if it can't
+// parse value from an environment variable, thus taking care of validation of
+// environment variables values.
+func Unmarshal(v interface{}) error {
+	u := NewUnmarshaler()
+	return u.Unmarshal(v)
 }
 
 // ClearEnvVars will clear all environment variables based on the struct
@@ -128,9 +160,13 @@ func getEnvKey(structField reflect.StructField) string {
 	return structField.Name
 }
 
-func unmarshalInt(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
-	val, ok := env[getEnvKey(structField)]
+func (e EnvUnmarshaler) unmarshalInt(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+	envKey := getEnvKey(structField)
+	val, ok := env[envKey]
 	if !ok {
+		if e.failOnUndefined {
+			return environEmptyError(envKey)
+		}
 		return nil
 	}
 
@@ -145,9 +181,13 @@ func unmarshalInt(fieldVal reflect.Value, structField reflect.StructField, env e
 
 var boolErr error = errors.New("pass string 'true' or 'false' for boolean fields")
 
-func unmarshalBool(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
-	val, ok := env[getEnvKey(structField)]
+func (e EnvUnmarshaler) unmarshalBool(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+	envKey := getEnvKey(structField)
+	val, ok := env[envKey]
 	if !ok {
+		if e.failOnUndefined {
+			return environEmptyError(envKey)
+		}
 		return nil
 	}
 
@@ -165,9 +205,13 @@ func unmarshalBool(fieldVal reflect.Value, structField reflect.StructField, env 
 	return nil
 }
 
-func unmarshalString(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
-	val, ok := env[getEnvKey(structField)]
+func (e EnvUnmarshaler) unmarshalString(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+	envKey := getEnvKey(structField)
+	val, ok := env[envKey]
 	if !ok {
+		if e.failOnUndefined {
+			return environEmptyError(envKey)
+		}
 		return nil
 	}
 
@@ -175,9 +219,13 @@ func unmarshalString(fieldVal reflect.Value, structField reflect.StructField, en
 	return nil
 }
 
-func unmarshalTextUnmarshaler(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
-	val, ok := env[getEnvKey(structField)]
+func (e EnvUnmarshaler) unmarshalTextUnmarshaler(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+	envKey := getEnvKey(structField)
+	val, ok := env[envKey]
 	if !ok {
+		if e.failOnUndefined {
+			return environEmptyError(envKey)
+		}
 		return nil
 	}
 
@@ -222,7 +270,7 @@ func appendToBoolSlice(fieldVal reflect.Value, sliceVal string) error {
 	return nil
 }
 
-func unmarshalSlice(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+func (e EnvUnmarshaler) unmarshalSlice(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
 	envKey := getEnvKey(structField)
 	envNames := make([]string, 0)
 
@@ -232,6 +280,9 @@ func unmarshalSlice(fieldVal reflect.Value, structField reflect.StructField, env
 		}
 	}
 	sort.Strings(envNames)
+	if e.failOnUndefined && len(envNames) == 0 {
+		return environEmptyError(envKey)
+	}
 
 	var err error
 	for _, envName := range envNames {
@@ -262,30 +313,30 @@ func unmarshalSlice(fieldVal reflect.Value, structField reflect.StructField, env
 	return nil
 }
 
-func unmarshalSingleField(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
+func (e EnvUnmarshaler) unmarshalSingleField(fieldVal reflect.Value, structField reflect.StructField, env environ) error {
 	if !fieldVal.CanSet() { // unexported field can not be set
 		return nil
 	}
 	// special case for structs that implement TextUnmarshaler interface
 	if isTextUnmarshaler(structField.Type) {
-		return unmarshalTextUnmarshaler(fieldVal, structField, env)
+		return e.unmarshalTextUnmarshaler(fieldVal, structField, env)
 	}
 	switch structField.Type.Kind() {
 	case reflect.Int:
-		return unmarshalInt(fieldVal, structField, env)
+		return e.unmarshalInt(fieldVal, structField, env)
 	case reflect.String:
-		return unmarshalString(fieldVal, structField, env)
+		return e.unmarshalString(fieldVal, structField, env)
 	case reflect.Bool:
-		return unmarshalBool(fieldVal, structField, env)
+		return e.unmarshalBool(fieldVal, structField, env)
 	case reflect.Slice:
-		return unmarshalSlice(fieldVal, structField, env)
+		return e.unmarshalSlice(fieldVal, structField, env)
 	}
 	return nil
 }
 
-func unmarshalAllStructFields(structVal reflect.Value, env environ) error {
+func (e EnvUnmarshaler) unmarshalAllStructFields(structVal reflect.Value, env environ) error {
 	for i := 0; i < structVal.NumField(); i++ {
-		if err := unmarshalSingleField(structVal.Field(i), structVal.Type().Field(i), env); err != nil {
+		if err := e.unmarshalSingleField(structVal.Field(i), structVal.Type().Field(i), env); err != nil {
 			return err
 		}
 	}
@@ -398,4 +449,8 @@ func newEnviron() (environ, error) {
 	}
 
 	return env, nil
+}
+
+func environEmptyError(f string) error {
+	return errors.New("field not found in environment: " + f)
 }

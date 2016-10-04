@@ -281,6 +281,7 @@ type TextUnmarshalerType struct {
 
 func TestUnmarshalTextUnmarshaler(t *testing.T) {
 	setEnv(t, "TEXT_UNMARSHALER", "abc")
+	defer os.Clearenv()
 	var v TextUnmarshalerType
 	Unmarshal(&v)
 	if v.TEXT_UNMARSHALER.MyText != "myabc" {
@@ -375,4 +376,63 @@ func TestGeneral(t *testing.T) {
 		t.Fatal("should be eq")
 	}
 
+}
+
+func TestUnmarshalIntFailOnUndefined(t *testing.T) {
+	setEnv(t, "INT_1", "1")
+	setEnv(t, "INT_2", "2")
+	defer os.Clearenv()
+
+	var i IntType
+	u := NewUnmarshaler().FailOnUndefined()
+	if err := u.Unmarshal(&i); err == nil {
+		t.Fatal("undefined variables should cause error")
+	}
+}
+
+func TestUnmarshalStringFailOnUndefined(t *testing.T) {
+	setEnv(t, "STR_1", "s1")
+	setEnv(t, "STR_2", "s2")
+	setEnv(t, "LABEL_STR", "s3")
+	defer os.Clearenv()
+
+	var s StringType
+	u := NewUnmarshaler().FailOnUndefined()
+	if err := u.Unmarshal(&s); err == nil {
+		t.Fatal("undefined variables should cause error")
+	}
+}
+
+func TestUnmarshalBoolFailOnUndefined(t *testing.T) {
+	setEnv(t, "BOOL_1", "true")
+	setEnv(t, "LABEL_BOOL", "true")
+	defer os.Clearenv()
+
+	var b BoolType
+	u := NewUnmarshaler().FailOnUndefined()
+	if err := u.Unmarshal(&b); err == nil {
+		t.Fatal("undefined variables should cause error")
+	}
+}
+
+func TestUnmarshalSliceFailUndefined(t *testing.T) {
+	setEnv(t, "SLICE_STR_1", "foo")
+	setEnv(t, "SLICE_STR_2", "bar")
+	setEnv(t, "SLICE_INT_1", "1")
+	setEnv(t, "SLICE_INT_2", "2")
+	defer os.Clearenv()
+
+	var s SliceType
+	u := NewUnmarshaler().FailOnUndefined()
+	if err := u.Unmarshal(&s); err == nil {
+		t.Fatal("should fail on missing environment variable")
+	}
+}
+
+func TestTextUnmarshalFailUndefined(t *testing.T) {
+	u := NewUnmarshaler().FailOnUndefined()
+	var c cfgValid3
+	if err := u.Unmarshal(c); err == nil {
+		t.Fatal("should fail on missing environment variable")
+	}
 }
